@@ -1,13 +1,18 @@
 const express = require('express');
 const path = require('path');
 const favicon = require('serve-favicon');
+//Better logging
 const pino = require('pino')();
+//Better security
 const helmet = require('helmet');
+//Better cookies
 const cookieSession = require('cookie-session');
 const bodyParser = require('body-parser');
 const sassMiddleware = require('node-sass-middleware');
+//Checks to see if NODE_ENV is set, and if not, defaults to development
 const env = process.env.NODE_ENV || 'development';
 const knexConfig = require("./knexfile");
+//This way, all modules have access to knex
 process.knex = require("knex")(knexConfig[env]);
 
 const index = require('./routes/index');
@@ -24,6 +29,13 @@ app.set('view engine', 'ejs');
 app.use(cookieSession({
   keys: ['fluffybunny', 'rutabaga', 'bananabread']
 }));
+
+//This is our own custom middleware
+//After session is configured, but BEFORE routes:
+//Check to see if there is a user_id in req.session
+//If there is, set req.loggedIn and look up the user from the db
+//Save user in a key on the request object, making it available
+//to routes later on
 app.use((req, res, next) => {
   req.loggedIn = Boolean(req.session.user_id);
   if (req.loggedIn) {

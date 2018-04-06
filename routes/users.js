@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
+//We set this in our app.js file, and we can access it here
+//because process is in scope as a global variable
+//Used 'db' because it's easier to type than process.knex
 const db = process.knex;
 
 router.get('/register', (req, res, next) => {
@@ -25,12 +28,15 @@ router.get('/logout', (req, res, next) => {
 });
 
 router.post('/register', (req, res, next) => {
+  //ES6 destructuring
   const {email, password} = req.body;
 
   const pw = bcrypt.hashSync(password, 10);
   db('users').insert({email, password: pw}).returning('id')
   .then(result => {
     if(result) {
+      //.returning('id') doesn't work on sqlite3, but does on PG
+      //sqlite3 returns an array with the id in it automatically
       let id = (process.env.NODE_ENV === "development") ? result[0] : result[0].id;
       req.session.user_id = id;
       res.redirect('/');
@@ -48,6 +54,7 @@ router.post('/login', (req, res, next) => {
   .then(users => {
     if (users.length) {
       let user = users[0]; 
+      //Let bcrypt compare the passwords, don't try and hash it yourself
       if(bcrypt.compareSync(password, user.password)) {
         req.session.user_id = user.id;
         res.redirect('/');
@@ -60,4 +67,5 @@ router.post('/login', (req, res, next) => {
   })
   .catch(err => pino.error("WTF: ", err)); 
 });
+
 module.exports = router;
